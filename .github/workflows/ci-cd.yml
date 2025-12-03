@@ -8,6 +8,10 @@ on:
   pull_request:
     branches: [ "main", "develop" ] # Triggers on pull requests
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   # --- 1. DJANGO BACKEND TESTS (Runs first) ---
   backend-test:
@@ -44,10 +48,9 @@ jobs:
 
   # --- 3. DEPLOYMENT (Only runs if 1 and 2 succeed) ---
   build-and-push:
-    name: Build & Push Docker Image to GHCR
+    name: Build & Push Docker Images to GHCR
     runs-on: ubuntu-latest
     
-    # CRITICAL: This is now a valid dependency since the jobs are in the same file.
     needs: 
       - backend-test 
       - frontend-build 
@@ -57,6 +60,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
@@ -67,23 +71,44 @@ jobs:
         username: ${{ github.actor }} 
         password: ${{ secrets.GITHUB_TOKEN }} 
 
-    - name: Set Image Tags
-      id: meta
+    # --- BUILD & PUSH BACKEND ---
+    - name: Extract metadata (tags) for Backend
+      id: meta-backend
       uses: docker/metadata-action@v5
       with:
-        images: ghcr.io/${{ github.repository }}
+        # Note the '-backend' suffix
+        images: ghcr.io/${{ github.repository }}-backend
         tags: |
-          # Tag with the short commit hash (e.g., sha-8f3a2c)
           type=sha,format=short
-          # Tag with 'latest' ONLY if we are pushing to the main branch
           type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
-    - name: Build and Push Docker Compose Stack
+    - name: Build and Push Backend
       uses: docker/build-push-action@v5
       with:
         context: .
+        file: ./Dockerfile  # Uses the Python backend Dockerfile
         push: true
-        file: ./docker-compose.yml 
-        tags: ${{ steps.meta.outputs.tags }}
+        tags: ${{ steps.meta-backend.outputs.tags }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    # --- BUILD & PUSH FRONTEND ---
+    - name: Extract metadata (tags) for Frontend
+      id: meta-frontend
+      uses: docker/metadata-action@v5
+      with:
+        # Note the '-frontend' suffix
+        images: ghcr.io/${{ github.repository }}-frontend
+        tags: |
+          type=sha,format=short
+          type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+    - name: Build and Push Frontend
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.frontend  # Uses the React frontend Dockerfile
+        push: true
+        tags: ${{ steps.meta-frontend.outputs.tags }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
