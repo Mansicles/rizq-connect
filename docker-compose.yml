@@ -3,11 +3,11 @@ version: '3.8'
 services:
   # --- 1. DJANGO BACKEND SERVICE ---
   backend:
-    container_name: rizq_backend # Added container name for clarity
+    container_name: rizq_backend
     build:
       context: .
       dockerfile: Dockerfile
-    # CRITICAL: Explicitly set the command for local development 
+    # Command for local development
     command: python manage.py runserver 0.0.0.0:8000 
     volumes:
       # Mount the current directory into the container for live code changes
@@ -18,26 +18,27 @@ services:
       - PYTHONUNBUFFERED=1
       - DJANGO_SETTINGS_MODULE=rizq_backend.settings
       - DEBUG=True
-    # Removed unnecessary dependency on frontend
 
-  # --- 2. REACT FRONTEND SERVICE ---
+  # --- 2. REACT FRONTEND SERVICE (Development Mode) ---
   frontend:
-    container_name: rizq_frontend # Added container name for clarity
+    container_name: rizq_frontend
     build:
       context: .
+      # Uses the simpler development Dockerfile
       dockerfile: Dockerfile.frontend
-    # CRITICAL: Add command to start the React development server for hot-reloading
+    # Command to start the React development server for hot-reloading
     command: npm start 
     volumes:
       # Mount the current directory for live code changes
       - .:/app
-      # CRITICAL: Exclude node_modules to prevent permission errors/conflicts
+      # CRITICAL: Exclude node_modules to prevent errors
       - /app/node_modules
-    # CRITICAL: Map host port 3000 to container port 3000 (React dev server default)
+    # Map host port 3000 to container port 3000 (React dev server default)
     ports:
       - "3000:3000" 
     environment:
       # Set the API URL to communicate with the backend service by its service name ('backend')
+      # 'backend' is the service name defined above, which resolves to its internal IP
       - REACT_APP_API_URL=http://backend:8000/api/
     # The frontend needs the backend API to be running
     depends_on:
