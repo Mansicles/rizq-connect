@@ -1,0 +1,87 @@
+# .github/workflows/ci-cd.yml
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main", "develop" ] # Triggers on push
+  pull_request:
+    branches: [ "main", "develop" ] # Triggers on pull requests
+
+jobs:
+  # --- 1. DJANGO BACKEND TESTS (Runs first) ---
+  backend-test:
+    name: Django Backend Tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    - name: Run Django Tests
+      run: |
+        python manage.py test api
+
+  # --- 2. REACT FRONTEND BUILD (Runs first) ---
+  frontend-build:
+    name: React Frontend Build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    - name: Install Dependencies
+      run: npm install
+    - name: Build React App
+      run: npm run build
+
+  # --- 3. DEPLOYMENT (Only runs if 1 and 2 succeed) ---
+  build-and-push:
+    name: Build & Push Docker Image to GHCR
+    runs-on: ubuntu-latest
+    
+    # CRITICAL: This is now a valid dependency since the jobs are in the same file.
+    needs: 
+      - backend-test 
+      - frontend-build 
+    
+    # Only push to registry if merging into the 'main' branch
+    if: github.ref == 'refs/heads/main' 
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }} 
+        password: ${{ secrets.GITHUB_TOKEN }} 
+
+    - name: Set Image Tags
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository }}
+        tags: |
+          type=sha,prefix=,suffix=,format=short 
+          type=branch,ref=refs/heads/main,enable=${{ github.ref == 'refs/heads/main' }},value=latest # Add 'latest' tag on main branch
+
+    - name: Build and Push Docker Compose Stack
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        file: ./docker-compose.yml 
+        tags: ${{ steps.meta.outputs.tags }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
