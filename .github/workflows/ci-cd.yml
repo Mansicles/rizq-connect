@@ -73,8 +73,10 @@ jobs:
       with:
         images: ghcr.io/${{ github.repository }}
         tags: |
-          type=sha,prefix=,suffix=,format=short 
-          type=branch,ref=refs/heads/main,enable=${{ github.ref == 'refs/heads/main' }},value=latest # Add 'latest' tag on main branch
+          # Tag with the short commit hash (e.g., sha-8f3a2c)
+          type=sha,format=short
+          # Tag with 'latest' ONLY if we are pushing to the main branch
+          type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
     - name: Build and Push Docker Compose Stack
       uses: docker/build-push-action@v5
