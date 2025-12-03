@@ -1,30 +1,44 @@
 version: '3.8'
 
 services:
-  # --- Django Backend Service ---
+  # --- 1. DJANGO BACKEND SERVICE ---
   backend:
+    container_name: rizq_backend # Added container name for clarity
     build:
       context: .
       dockerfile: Dockerfile
-    # Command will be overridden by the CMD in the Dockerfile
+    # CRITICAL: Explicitly set the command for local development 
+    command: python manage.py runserver 0.0.0.0:8000 
     volumes:
-      # Mount the current directory into the container for development
+      # Mount the current directory into the container for live code changes
       - .:/app
     ports:
       - "8000:8000"
     environment:
-      # Set up environment variables here (e.g., SECRET_KEY, Database Credentials)
-      # For now, we rely on the default settings.py and SQLite
-      PYTHONUNBUFFERED: 1
-    depends_on:
-      - frontend # The backend needs to know the frontend is available
+      - PYTHONUNBUFFERED=1
+      - DJANGO_SETTINGS_MODULE=rizq_backend.settings
+      - DEBUG=True
+    # Removed unnecessary dependency on frontend
 
-  # --- React Frontend Service ---
+  # --- 2. REACT FRONTEND SERVICE ---
   frontend:
+    container_name: rizq_frontend # Added container name for clarity
     build:
       context: .
       dockerfile: Dockerfile.frontend
+    # CRITICAL: Add command to start the React development server for hot-reloading
+    command: npm start 
+    volumes:
+      # Mount the current directory for live code changes
+      - .:/app
+      # CRITICAL: Exclude node_modules to prevent permission errors/conflicts
+      - /app/node_modules
+    # CRITICAL: Map host port 3000 to container port 3000 (React dev server default)
     ports:
-      - "3000:80"  # Map host port 3000 to container port 80 (Nginx default)
+      - "3000:3000" 
+    environment:
+      # Set the API URL to communicate with the backend service by its service name ('backend')
+      - REACT_APP_API_URL=http://backend:8000/api/
+    # The frontend needs the backend API to be running
     depends_on:
       - backend
