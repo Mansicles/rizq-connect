@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # --- Django Backend Service ---
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # Command will be overridden by the CMD in the Dockerfile
+    volumes:
+      # Mount the current directory into the container for development
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      # Set up environment variables here (e.g., SECRET_KEY, Database Credentials)
+      # For now, we rely on the default settings.py and SQLite
+      PYTHONUNBUFFERED: 1
+    depends_on:
+      - frontend # The backend needs to know the frontend is available
+
+  # --- React Frontend Service ---
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:80"  # Map host port 3000 to container port 80 (Nginx default)
+    depends_on:
+      - backend
