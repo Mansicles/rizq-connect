@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
 
+// FIX: Removed reliance on 'process.env' which causes 'ReferenceError: process is not defined' 
+// in certain environments.
+// Since the environment is Docker Compose (frontend container -> backend container), 
+// we hardcode the internal service name and port.
+const BASE_API_URL = 'http://backend:8000/api/'; 
+
 function Donate() {
   // 1. State to manage form inputs
   const [formData, setFormData] = useState({
@@ -17,24 +23,35 @@ function Donate() {
   // 3. Handle Form Submission
   const handleSubmit = async (e) => {
     e.preventDefault(); // Stop page from refreshing
+    
+    // Construct the full URL for the donations endpoint
+    const url = `${BASE_API_URL}donations/`;
+    
     try {
-      const response = await fetch('http://localhost:8000/api/donations/', {
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        // IMPORTANT: The backend may expect 'amount' or 'amount_or_item' 
+        // Ensure your serializer/model matches 'amount_or_item' or you might get a 400 Bad Request 
         body: JSON.stringify(formData),
       });
 
       if (response.ok) {
-        alert('Thank you! Donation recorded.');
+        // NOTE: Changed alert() to console.log
+        console.log('Thank you! Donation recorded.');
         setFormData({ donor_name: '', email: '', amount_or_item: '', description: '' }); // Clear form
       } else {
-        alert('Failed to donate. Please try again.');
+        // Attempt to log the server error for debugging
+        const errorData = await response.json();
+        console.error('Failed to donate:', errorData);
+        console.log('Failed to donate. Please check server response in console.');
       }
     } catch (error) {
-      console.error('Error:', error);
-      alert('Error connecting to server.');
+      console.error('Connection Error:', error);
+      // NOTE: Changed alert() to console.log
+      console.log('Error connecting to server. Check if backend is running and URL is correct.');
     }
   };
 

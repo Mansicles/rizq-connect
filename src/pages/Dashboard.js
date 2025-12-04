@@ -1,23 +1,36 @@
 import React, { useState, useEffect } from 'react';
 
+// FIX: Hardcoding the internal Docker network URL to ensure the 
+// frontend container can communicate with the 'backend' container.
+const BASE_API_URL = 'http://backend:8000/api/';
+
 function Dashboard() {
   // 1. State to hold the data from the backend
   const [stats, setStats] = useState({
     total_raised: 0,
     donations_count: 0,
     volunteers_count: 0,
-    cities_covered: 0
+    cities_covered: 3
   });
 
   // 2. useEffect to fetch data when the page loads
   useEffect(() => {
-    fetch('http://localhost:8000/api/stats/')
-      .then(response => response.json())
+    // FIX APPLIED: Using the internal service name 'backend'
+    const url = `${BASE_API_URL}stats/`;
+
+    fetch(url)
+      .then(response => {
+        if (!response.ok) {
+            // Throw an error if the HTTP status is not 2xx
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
       .then(data => {
-        console.log("Data fetched:", data); // Check console to see if it works
+        console.log("Dashboard Data fetched successfully:", data); 
         setStats(data);
       })
-      .catch(error => console.error('Error fetching stats:', error));
+      .catch(error => console.error('Error fetching dashboard stats. Is Django running and the stats endpoint defined?', error));
   }, []);
 
   return (
@@ -54,7 +67,7 @@ function Dashboard() {
         </div>
       </div>
       
-      {/* ... keep the Recent Activities section static for now ... */}
+      {/* If your backend provides data for recent activities, you'd fetch it here. */}
     </div>
   );
 }

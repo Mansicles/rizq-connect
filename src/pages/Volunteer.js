@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 
+// FIX: Hardcoding the internal Docker network URL to ensure the 
+// frontend container can communicate with the 'backend' container.
+const BASE_API_URL = 'http://backend:8000/api/';
+
 function Volunteer() {
   // State to manage form inputs, matching backend model fields
   const [formData, setFormData] = useState({
     full_name: '', // Maps to 'full_name' in api/models.py
     email: '',
     city: '',
-    reason: ''     // Maps to 'reason' in api/models.py
+    reason: ''     // Maps to 'reason' in api/models.py
   });
 
   // Handle typing in inputs
@@ -17,9 +21,13 @@ function Volunteer() {
   // Handle Form Submission (POST request to Django API)
   const handleSubmit = async (e) => {
     e.preventDefault(); 
+    
+    // Construct the full URL for the volunteers endpoint
+    const url = `${BASE_API_URL}volunteers/`;
+
     try {
-      // POST request to the Volunteer API endpoint
-      const response = await fetch('http://localhost:8000/api/volunteers/', {
+      // POST request to the Volunteer API endpoint using the correct internal URL
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -28,15 +36,20 @@ function Volunteer() {
       });
 
       if (response.ok) {
-        alert('Volunteer application submitted successfully!');
+        // NOTE: Replacing alert() with console.log()
+        console.log('Volunteer application submitted successfully!');
         // Clear form after successful submission
         setFormData({ full_name: '', email: '', city: '', reason: '' }); 
       } else {
-        alert('Failed to submit application. Please check your network.');
+        const errorData = await response.json();
+        console.error('Failed to submit application. Server Response:', errorData);
+        // NOTE: Replacing alert() with console.log()
+        console.log('Failed to submit application. Please check the console for server errors.');
       }
     } catch (error) {
-      console.error('Error:', error);
-      alert('Error connecting to server. Is the Django server running?');
+      console.error('Connection Error:', error);
+      // NOTE: Replacing alert() with console.log()
+      console.log('Error connecting to server. Please verify Docker containers are running.');
     }
   };
 

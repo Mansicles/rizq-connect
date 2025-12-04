@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
 
+// FIX: Hardcoding the internal Docker network URL to avoid the 
+// 'ReferenceError: process is not defined' error and ensure the 
+// frontend container can communicate with the 'backend' container.
+const BASE_API_URL = 'http://backend:8000/api/';
+
 function Contact() {
   // State to manage form inputs, matching backend model fields
   const [formData, setFormData] = useState({
@@ -16,9 +21,13 @@ function Contact() {
   // Handle Form Submission (POST request to Django API)
   const handleSubmit = async (e) => {
     e.preventDefault(); 
+    
+    // Construct the full URL for the contact endpoint
+    const url = `${BASE_API_URL}contact/`;
+    
     try {
-      // POST request to the Contact API endpoint
-      const response = await fetch('http://localhost:8000/api/contact/', {
+      // POST request to the Contact API endpoint using the correct internal URL
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -27,15 +36,20 @@ function Contact() {
       });
 
       if (response.ok) {
-        alert('Message sent successfully! We will be in touch soon.');
+        // NOTE: Replacing alert() with console.log()
+        console.log('Message sent successfully! We will be in touch soon.');
         // Clear form after successful submission
         setFormData({ name: '', email: '', message: '' }); 
       } else {
-        alert('Failed to send message. Please check your network.');
+        const errorData = await response.json();
+        console.error('Failed to send message. Server Response:', errorData);
+        // NOTE: Replacing alert() with console.log()
+        console.log('Failed to send message. Please check the console for server errors.');
       }
     } catch (error) {
-      console.error('Error:', error);
-      alert('Error connecting to server. Is the Django server running?');
+      console.error('Connection Error:', error);
+      // NOTE: Replacing alert() with console.log()
+      console.log('Error connecting to server. Please verify Docker containers are running.');
     }
   };
 
