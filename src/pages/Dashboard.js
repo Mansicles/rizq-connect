@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 
-// FIX: Hardcoding the internal Docker network URL to ensure the 
-// frontend container can communicate with the 'backend' container.
-const BASE_API_URL = 'http://backend:8000/api/';
+// FIX APPLIED: Changed 'http://backend:8000/api/' to 'http://localhost:8000/api/'.
+// The browser (running external to the Docker network) must use 'localhost' to
+// access the port forwarded by the Docker host.
+const BASE_API_URL = 'http://localhost:8000/api/';
 
 function Dashboard() {
   // 1. State to hold the data from the backend
@@ -15,7 +16,7 @@ function Dashboard() {
 
   // 2. useEffect to fetch data when the page loads
   useEffect(() => {
-    // FIX APPLIED: Using the internal service name 'backend'
+    // Using the external access URL 'localhost'
     const url = `${BASE_API_URL}stats/`;
 
     fetch(url)

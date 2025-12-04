@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 
-// FIX: Hardcoding the internal Docker network URL to avoid the 
-// 'ReferenceError: process is not defined' error and ensure the 
-// frontend container can communicate with the 'backend' container.
-const BASE_API_URL = 'http://backend:8000/api/';
+// FIX APPLIED: Changed 'http://backend:8000/api/' to 'http://localhost:8000/api/'
+// The browser (running external to the Docker network) must use 'localhost' to
+// access the port forwarded by the Docker host.
+const BASE_API_URL = 'http://localhost:8000/api/';
 
 function Contact() {
   // State to manage form inputs, matching backend model fields
@@ -13,7 +13,7 @@ function Contact() {
     message: '' // Maps to 'message' in api/models.py
   });
   
-  // NEW: State for visual feedback message
+  // State for visual feedback message
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(null); // null, true, or false
 
@@ -33,7 +33,7 @@ function Contact() {
     const url = `${BASE_API_URL}contact/`;
     
     try {
-      // POST request to the Contact API endpoint using the correct internal URL
+      // POST request to the Contact API endpoint using the correct URL
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -49,14 +49,16 @@ function Contact() {
         // Clear form after successful submission
         setFormData({ name: '', email: '', message: '' }); 
       } else {
+        // This is a 4xx or 5xx error (Django problem, not a network failure)
         const errorData = await response.json();
         console.error('Failed to send message. Server Response:', errorData);
-        setMessage('Failed to send message! Check the browser console (F12) for server details.');
+        setMessage('Submission failed! Check the browser console (F12) for server details.');
         setIsSuccess(false);
       }
     } catch (error) {
+      // This block should now only catch actual connection issues (like Django being stopped)
       console.error('Connection Error:', error);
-      setMessage('Error connecting to the API. Is your Django backend running?');
+      setMessage('Error connecting to the API. Is your Django backend running on localhost:8000?');
       setIsSuccess(false);
     }
   };
@@ -65,7 +67,7 @@ function Contact() {
     <div className="p-8 bg-white min-h-screen">
       <h2 className="text-3xl font-bold text-emerald-700 mb-6 text-center">Contact Us</h2>
       
-      {/* NEW: Message Display */}
+      {/* Message Display */}
       {message && (
         <div 
           className={`max-w-xl mx-auto p-4 mb-4 rounded-lg text-center font-semibold ${
