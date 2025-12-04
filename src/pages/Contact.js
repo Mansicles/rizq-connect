@@ -12,15 +12,22 @@ function Contact() {
     email: '',
     message: '' // Maps to 'message' in api/models.py
   });
+  
+  // NEW: State for visual feedback message
+  const [message, setMessage] = useState('');
+  const [isSuccess, setIsSuccess] = useState(null); // null, true, or false
 
   // Handle typing in inputs
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setMessage(''); // Clear message on new input
   };
 
   // Handle Form Submission (POST request to Django API)
   const handleSubmit = async (e) => {
     e.preventDefault(); 
+    setMessage('Sending message...');
+    setIsSuccess(null); // Reset status
     
     // Construct the full URL for the contact endpoint
     const url = `${BASE_API_URL}contact/`;
@@ -36,26 +43,41 @@ function Contact() {
       });
 
       if (response.ok) {
-        // NOTE: Replacing alert() with console.log()
         console.log('Message sent successfully! We will be in touch soon.');
+        setMessage('Message sent successfully! We will be in touch soon.');
+        setIsSuccess(true);
         // Clear form after successful submission
         setFormData({ name: '', email: '', message: '' }); 
       } else {
         const errorData = await response.json();
         console.error('Failed to send message. Server Response:', errorData);
-        // NOTE: Replacing alert() with console.log()
-        console.log('Failed to send message. Please check the console for server errors.');
+        setMessage('Failed to send message! Check the browser console (F12) for server details.');
+        setIsSuccess(false);
       }
     } catch (error) {
       console.error('Connection Error:', error);
-      // NOTE: Replacing alert() with console.log()
-      console.log('Error connecting to server. Please verify Docker containers are running.');
+      setMessage('Error connecting to the API. Is your Django backend running?');
+      setIsSuccess(false);
     }
   };
 
   return (
     <div className="p-8 bg-white min-h-screen">
       <h2 className="text-3xl font-bold text-emerald-700 mb-6 text-center">Contact Us</h2>
+      
+      {/* NEW: Message Display */}
+      {message && (
+        <div 
+          className={`max-w-xl mx-auto p-4 mb-4 rounded-lg text-center font-semibold ${
+            isSuccess === true ? 'bg-green-100 text-green-700' : 
+            isSuccess === false ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+          }`}
+        >
+          {message}
+        </div>
+      )}
+      {/* End Message Display */}
+      
       <form onSubmit={handleSubmit} className="max-w-xl mx-auto space-y-6 p-8 border border-gray-200 rounded-xl shadow-lg bg-white">
         
         <input 
